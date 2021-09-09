@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import os
 import math
 import logging
@@ -60,7 +58,8 @@ def create_tile(source, filename, offset, size, quality=75):
 
     def transform(xy):
         x, y = xy[0], xy[1]
-        return (t[0] + x*t[1] + y*t[2], t[3] + x*t[4] + y*t[5])
+        X, Y = t[0] + x*t[1] + y*t[2], t[3] + x*t[4] + y*t[5]
+        return X, Y
     
     nw = transform(offset)
     se = transform([offset[0] + size[0], offset[1] + size[1]])
@@ -119,10 +118,10 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
             else:
                 src_corner = (border + t_x * tile_sizes[0], border + t_y * tile_sizes[1])
                 src_size = [tile_sizes[0], tile_sizes[1]]
-                if src_corner[0] + tile_sizes[0] > img_size[0] - options.border:
+                if src_corner[0] + tile_sizes[0] > img_size[0] - border:
                     src_size[0] = int(tile_sizes[0])
 
-                if src_corner[1] + tile_sizes[1] > img_size[1] - options.border:
+                if src_corner[1] + tile_sizes[1] > img_size[1] - border:
                     src_size[1] = int(tile_sizes[1])
                 
                 outfile = "%s_%d_%d.jpg" % (base, t_x, t_y)
@@ -200,7 +199,7 @@ if __name__ == '__main__':
         for line in open(exclude_file):
             exclude.append(line.rstrip())
         logging.debug(exclude)
-        
+
     create_kml(source, dest, options.directory,
                tile_size=options.tile_size,
                border=options.border,
