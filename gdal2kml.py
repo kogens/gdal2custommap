@@ -2,7 +2,8 @@ import os
 import math
 import logging
 from optparse import OptionParser
-from osgeo import gdal        
+from osgeo import gdal
+from osgeo import osr
 
 
 def tiles(canvas, target=1024):
@@ -173,19 +174,19 @@ if __name__ == '__main__':
     if len(args) != 2:
         parser.error('Missing file paths')
 
-    source, dest = args
+    source_file, destination_file = args
 
     if options.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
     # validate a few options
-    if not os.path.exists(source):
+    if not os.path.exists(source_file):
         parser.error('unable to file src_file')
     # if options.scale<10 or options.scale>150: parser.error('scale must be between 10% and 150%')
 
     # set the default folder for jpegs
     if not options.directory:
-        options.directory = "%s.files" % os.path.splitext(dest)[0]
+        options.directory = "%s.files" % os.path.splitext(destination_file)[0]
 
     if not os.path.exists(options.directory):
         os.mkdir(options.directory)
@@ -193,7 +194,7 @@ if __name__ == '__main__':
     logging.info('Writing jpegs to %s' % options.directory)
 
     # load the exclude file
-    exclude_file = source + ".exclude"
+    exclude_file = source_file + ".exclude"
     exclude = []
     if os.path.exists(exclude_file):
         logging.debug("Using exclude file %s" % exclude_file)
@@ -201,7 +202,7 @@ if __name__ == '__main__':
             exclude.append(line.rstrip())
         logging.debug(exclude)
 
-    create_kml(source, dest, options.directory,
+    create_kml(source_file, destination_file, options.directory,
                tile_size=options.tile_size,
                border=options.border,
                name=options.name,
