@@ -7,34 +7,34 @@ from osgeo import osr
 
 
 def tiles(canvas, target=1024):
-    """ 
+    """
     Brute force algorithm to determine the most efficient tiling method for a given canvas
     If anyone can figure out a prettier one please let me know - is actually harder then you'd think!
     """
     best_case = (canvas[0] * canvas[1]) / float(target**2)
-    
+
     # handle the trivial cases first
     if canvas[0] <= target:
         return [1, math.ceil(best_case)]
 
     if canvas[1] <= target:
         return [math.ceil(best_case), 1]
-    
+
     r = [float(x) / target for x in canvas]
-    
-    # brute force the 4 methods 
-    
+
+    # brute force the 4 methods
+
     a_up = [math.ceil(x) for x in r]
     b_up = [math.ceil(best_case / x) for x in a_up]
-    
+
     a_down = [math.floor(x) for x in r]
     b_down = [math.ceil(best_case / x) for x in a_down]
-    
+
     results = []
     for i in range(2):
         results.append((a_up[i], b_up[i], a_up[i] * b_up[i]))
         results.append((a_down[i], b_down[i], a_down[i] * b_down[i]))
-    
+
     results.sort(key=lambda x: x[2])
     return [int(x) for x in results[0][0:2]]
 
@@ -54,16 +54,16 @@ def create_tile(img, filename, offset, size, quality=75):
     mem_ds = mem_drv.Create('', size[0], size[1], img.RasterCount)
     bands = range(1, img.RasterCount + 1)
 
+    # TODO: consider this instead https://rasterio.readthedocs.io/en/latest/
     data = img.ReadRaster(offset[0], offset[1], size[0], size[1], size[0], size[1], band_list=bands)
     mem_ds.WriteRaster(0, 0, size[0], size[1], data, band_list=bands)
+    # Error comes because we go out of bounds of image?
 
     jpeg_drv = gdal.GetDriverByName('JPEG')
     jpeg_ds = jpeg_drv.CreateCopy(filename, mem_ds, strict=0, options=["QUALITY={0}".format(quality)])
 
     geotransform = img.GetGeoTransform()
 
-    # TODO: Make more general check for projection type
-    # https://gdal.org/user/raster_data_model.html#raster-data-model
     if geotransform[2] != 0 or geotransform[4] != 0:
         raise Exception('Source projection incompatible, transform contains rotation')
     else:
@@ -94,8 +94,17 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     projection = img.GetProjection()
     logging.info(projection)
 
+    # https://gdal.org/user/raster_data_model.html#raster-data-model
     srs = osr.SpatialReference(wkt=projection)
-    auth = srs.GetAttrValue('AUTHORITY', 1)
+    authority = (srs.GetAttrValue('AUTHORITY', 0), srs.GetAttrValue('AUTHORITY', 1))
+    logging.debug(authority)
+
+    if authority != ('EPSG', '4326'):
+        # https://gdal.org/tutorials/osr_api_tut.html#coordinate-transformation
+        # ct = osr.CoordinateTransformation()
+        errmsg = 'Input file is not in standard CRS. Should be EPSG 4326 but is %s %s' % (authority[0], authority[1])
+        logging.error(errmsg)
+        raise NotImplementedError(errmsg)
 
     img_size = [img.RasterXSize, img.RasterYSize]
     logging.debug('Image size: %s' % img_size)
@@ -135,9 +144,13 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
                 if src_corner[1] + tile_sizes[1] > img_size[1] - border:
                     src_size[1] = int(tile_sizes[1])
                 
-                outfile = "%s_%d_%d.jpg" % (base, t_x, t_y)
+                outfile = '%s_%d_%d.jpg' % (base, t_x, t_y)
+                outpath = '%s/%s' % (directory, outfile)
 
-                bounds = create_tile(img, "%s/%s" % (directory, outfile), src_corner, src_size, quality)
+                if src_corner[0] + src_size[0] > img_size[0]:
+                    logging.error('Pixel range outside image data!')
+                    logging.error('Image width %i, trying to get at x=%i' % (img_size[0], src_corner[0] + src_size[0]))
+                bounds = create_tile(img, outpath, src_corner, src_size, quality)
                 
                 bob.write("""    <GroundOverlay>
                 <name>%s</name>
