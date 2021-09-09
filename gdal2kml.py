@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
-import os, math, logging
+import os
+import math
+import logging
 from optparse import OptionParser
 from osgeo import gdal        
 
@@ -13,18 +15,21 @@ def tiles(canvas, target=1024):
     best_case = (canvas[0] * canvas[1]) / float(target**2)
     
     # handle the trivial cases first
-    if canvas[0] <= target: return [ 1, math.ceil(best_case) ]
-    if canvas[1] <= target: return [ math.ceil(best_case), 1 ]
+    if canvas[0] <= target:
+        return [1, math.ceil(best_case)]
+
+    if canvas[1] <= target:
+        return [math.ceil(best_case), 1]
     
-    r  = [ float(x) / target for x in canvas ]
+    r = [float(x) / target for x in canvas]
     
     # brute force the 4 methods 
     
-    a_up = [ math.ceil(x) for x in r ]
-    b_up = [ math.ceil(best_case / x) for x in a_up ]
+    a_up = [math.ceil(x) for x in r]
+    b_up = [math.ceil(best_case / x) for x in a_up]
     
-    a_down = [ math.floor(x) for x in r ]
-    b_down = [ math.ceil(best_case / x) for x in a_down ]
+    a_down = [math.floor(x) for x in r]
+    b_down = [math.ceil(best_case / x) for x in a_down]
     
     results = []
     for i in range(2):
@@ -32,7 +37,8 @@ def tiles(canvas, target=1024):
         results.append((a_down[i], b_down[i], a_down[i] * b_down[i]))
     
     results.sort(key=lambda x: x[2])
-    return [ int(x) for x in results[0][0:2] ]
+    return [int(x) for x in results[0][0:2]]
+
 
 def create_tile(source, filename, offset, size, quality=75):
     """
@@ -49,13 +55,15 @@ def create_tile(source, filename, offset, size, quality=75):
     jpeg_ds = jpeg_drv.CreateCopy(filename, mem_ds, strict=0, options=["QUALITY={0}".format(quality)])
 
     t = source.GetGeoTransform()
-    if t[2]!=0 or t[4]!=0: raise Exception("Source projection not compatible")
+    if t[2] != 0 or t[4] != 0:
+        raise Exception("Source projection not compatible")
+
     def transform(xy):
         x, y = xy[0], xy[1]
-        return ( t[0] + x*t[1] + y*t[2], t[3] + x*t[4] + y*t[5] )
+        return (t[0] + x*t[1] + y*t[2], t[3] + x*t[4] + y*t[5])
     
     nw = transform(offset)
-    se = transform([ offset[0] + size[0], offset[1] + size[1] ])
+    se = transform([offset[0] + size[0], offset[1] + size[1]])
     
     result = {
         'north': nw[1],
@@ -81,16 +89,17 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
 
     logging.debug('Image size: %s' % img_size)
 
-    cropped_size = [ x - border * 2 for x in img_size ]
+    cropped_size = [x - border * 2 for x in img_size]
 
     base, ext = os.path.splitext(os.path.basename(source))
 
-    if not name: name = base
+    if not name:
+        name = base
     path = os.path.relpath(directory, os.path.dirname(filename))
 
     tile_layout = tiles(cropped_size, tile_size)
 
-    tile_sizes = [ int(math.ceil(x)) for x in [ cropped_size[0] / tile_layout[0], cropped_size[1] / tile_layout[1] ] ]
+    tile_sizes = [int(math.ceil(x)) for x in [cropped_size[0] / tile_layout[0], cropped_size[1] / tile_layout[1]]]
     logging.debug('Using tile layout %s -> %s' % (tile_layout, tile_sizes))
 
     bob = open(filename, 'w')
@@ -109,9 +118,12 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
                 logging.debug("Excluding tile %s" % tile)
             else:
                 src_corner = (border + t_x * tile_sizes[0], border + t_y * tile_sizes[1])
-                src_size = [ tile_sizes[0], tile_sizes[1] ]
-                if src_corner[0] + tile_sizes[0] > img_size[0] - options.border: src_size[0] = int(tile_sizes[0])
-                if src_corner[1] + tile_sizes[1] > img_size[1] - options.border: src_size[1] = int(tile_sizes[1])
+                src_size = [tile_sizes[0], tile_sizes[1]]
+                if src_corner[0] + tile_sizes[0] > img_size[0] - options.border:
+                    src_size[0] = int(tile_sizes[0])
+
+                if src_corner[1] + tile_sizes[1] > img_size[1] - options.border:
+                    src_size[1] = int(tile_sizes[1])
                 
                 outfile = "%s_%d_%d.jpg" % (base, t_x, t_y)
                 bounds = create_tile(img, "%s/%s" % (directory, outfile), src_corner, src_size, quality)
@@ -135,7 +147,7 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     """ % bounds)
                 bob.write("""        </LatLonBox>
             </GroundOverlay>
-    """);
+    """)
         
     bob.write("""  </Folder>
     </kml>
@@ -145,8 +157,8 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     img = None
 
 
-if __name__== '__main__':
-    usage = "usage: %prog [options] src_file dst_file"
+if __name__ == '__main__':
+    usage = 'usage: %prog [options] src_file dst_file'
     parser = OptionParser(usage)
     parser.add_option('-d', '--dir', dest='directory', help='Where to create jpeg tiles')
     parser.add_option('-c', '--crop', default=0, dest='border', type='int', help='Crop border')
@@ -158,18 +170,26 @@ if __name__== '__main__':
 
     options, args = parser.parse_args()
 
-    if len(args) != 2: parser.error('Missing file paths')
+    if len(args) != 2:
+        parser.error('Missing file paths')
+
     source, dest = args
 
-    if options.verbose: logging.basicConfig(level=logging.DEBUG)
+    if options.verbose:
+        logging.basicConfig(level=logging.DEBUG)
 
     # validate a few options
-    if not os.path.exists(source): parser.error('unable to file src_file')
-    #if options.scale<10 or options.scale>150: parser.error('scale must be between 10% and 150%')
+    if not os.path.exists(source):
+        parser.error('unable to file src_file')
+    # if options.scale<10 or options.scale>150: parser.error('scale must be between 10% and 150%')
 
     # set the default folder for jpegs
-    if not options.directory: options.directory = "%s.files" % os.path.splitext(dest)[0]
-    if not os.path.exists(options.directory): os.mkdir(options.directory)
+    if not options.directory:
+        options.directory = "%s.files" % os.path.splitext(dest)[0]
+
+    if not os.path.exists(options.directory):
+        os.mkdir(options.directory)
+
     logging.info('Writing jpegs to %s' % options.directory)
 
     # load the exclude file
@@ -181,5 +201,10 @@ if __name__== '__main__':
             exclude.append(line.rstrip())
         logging.debug(exclude)
         
-    create_kml(source, dest, options.directory, 
-        tile_size=options.tile_size, border=options.border, name=options.name, order=options.order, exclude=exclude, quality=options.quality)
+    create_kml(source, dest, options.directory,
+               tile_size=options.tile_size,
+               border=options.border,
+               name=options.name,
+               order=options.order,
+               exclude=exclude,
+               quality=options.quality)
