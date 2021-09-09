@@ -38,21 +38,21 @@ def tiles(canvas, target=1024):
     return [int(x) for x in results[0][0:2]]
 
 
-def create_tile(source, filename, offset, size, quality=75):
+def create_tile(img, filename, offset, size, quality=75):
     """
     Create a jpeg of the given area and return the bounds.
     """
     mem_drv = gdal.GetDriverByName('MEM')
-    mem_ds = mem_drv.Create('', size[0], size[1], source.RasterCount)
-    bands = range(1, source.RasterCount+1)
+    mem_ds = mem_drv.Create('', size[0], size[1], img.RasterCount)
+    bands = range(1, img.RasterCount + 1)
 
-    data = source.ReadRaster(offset[0], offset[1], size[0], size[1], size[0], size[1], band_list=bands)
+    data = img.ReadRaster(offset[0], offset[1], size[0], size[1], size[0], size[1], band_list=bands)
     mem_ds.WriteRaster(0, 0, size[0], size[1], data, band_list=bands)
 
     jpeg_drv = gdal.GetDriverByName('JPEG')
     jpeg_ds = jpeg_drv.CreateCopy(filename, mem_ds, strict=0, options=["QUALITY={0}".format(quality)])
 
-    t = source.GetGeoTransform()
+    t = img.GetGeoTransform()
     if t[2] != 0 or t[4] != 0:
         raise Exception("Source projection not compatible")
 
@@ -60,20 +60,20 @@ def create_tile(source, filename, offset, size, quality=75):
         x, y = xy[0], xy[1]
         X, Y = t[0] + x*t[1] + y*t[2], t[3] + x*t[4] + y*t[5]
         return X, Y
-    
+
     nw = transform(offset)
     se = transform([offset[0] + size[0], offset[1] + size[1]])
-    
+
     result = {
         'north': nw[1],
         'east': se[0],
         'south': se[1],
         'west': nw[0],
     }
-    
+
     jpeg_ds = None
     mem_ds = None
-    
+
     return result
 
 
@@ -125,6 +125,7 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
                     src_size[1] = int(tile_sizes[1])
                 
                 outfile = "%s_%d_%d.jpg" % (base, t_x, t_y)
+
                 bounds = create_tile(img, "%s/%s" % (directory, outfile), src_corner, src_size, quality)
                 
                 bob.write("""    <GroundOverlay>
