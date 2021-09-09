@@ -39,6 +39,13 @@ def tiles(canvas, target=1024):
     return [int(x) for x in results[0][0:2]]
 
 
+def transform(x, y, geotransform):
+    xt = geotransform[0] + x*geotransform[1] + y*geotransform[2]
+    yt = geotransform[3] + x*geotransform[4] + y*geotransform[5]
+
+    return xt, yt
+
+
 def create_tile(img, filename, offset, size, quality=75):
     """
     Create a jpeg of the given area and return the bounds.
@@ -53,17 +60,15 @@ def create_tile(img, filename, offset, size, quality=75):
     jpeg_drv = gdal.GetDriverByName('JPEG')
     jpeg_ds = jpeg_drv.CreateCopy(filename, mem_ds, strict=0, options=["QUALITY={0}".format(quality)])
 
-    t = img.GetGeoTransform()
-    if t[2] != 0 or t[4] != 0:
-        raise Exception("Source projection not compatible")
+    geotransform = img.GetGeoTransform()
 
-    def transform(xy):
-        x, y = xy[0], xy[1]
-        X, Y = t[0] + x*t[1] + y*t[2], t[3] + x*t[4] + y*t[5]
-        return X, Y
-
-    nw = transform(offset)
-    se = transform([offset[0] + size[0], offset[1] + size[1]])
+    # TODO: Make more general check for projection type
+    # https://gdal.org/user/raster_data_model.html#raster-data-model
+    if geotransform[2] != 0 or geotransform[4] != 0:
+        raise Exception('Source projection incompatible, transform contains rotation')
+    else:
+        nw = transform(offset[0], offset[1], geotransform)
+        se = transform(offset[0] + size[0], offset[1] + size[1], geotransform)
 
     result = {
         'north': nw[1],
@@ -84,11 +89,16 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     """
     if exclude is None:
         exclude = []
+
     img = gdal.Open(source)
+    projection = img.GetProjection()
+    logging.info(projection)
+
+    srs = osr.SpatialReference(wkt=projection)
+    auth = srs.GetAttrValue('AUTHORITY', 1)
+
     img_size = [img.RasterXSize, img.RasterYSize]
-
     logging.debug('Image size: %s' % img_size)
-
     cropped_size = [x - border * 2 for x in img_size]
 
     base, ext = os.path.splitext(os.path.basename(source))
