@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-import os, math, re, sys, subprocess, logging
+import os, math, logging
 from optparse import OptionParser
 from osgeo import gdal        
+
 
 def tiles(canvas, target=1024):
     """ 
@@ -49,7 +50,8 @@ def create_tile(source, filename, offset, size, quality=75):
 
     t = source.GetGeoTransform()
     if t[2]!=0 or t[4]!=0: raise Exception("Source projection not compatible")
-    def transform((x, y)):
+    def transform(xy):
+        x, y = xy[0], xy[1]
         return ( t[0] + x*t[1] + y*t[2], t[3] + x*t[4] + y*t[5] )
     
     nw = transform(offset)
@@ -67,10 +69,13 @@ def create_tile(source, filename, offset, size, quality=75):
     
     return result
 
-def create_kml(source, filename, directory, tile_size=1024, border=0, name=None, order=20, exclude=[], quality=75):
+
+def create_kml(source, filename, directory, tile_size=1024, border=0, name=None, order=20, exclude=None, quality=75):
     """
     Create a kml file and associated images for the given georeferenced image 
     """
+    if exclude is None:
+        exclude = []
     img = gdal.Open(source)
     img_size = [img.RasterXSize, img.RasterYSize]
 
@@ -138,8 +143,9 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
 
     bob.close()
     img = None
-    
-if __name__=='__main__':
+
+
+if __name__== '__main__':
     usage = "usage: %prog [options] src_file dst_file"
     parser = OptionParser(usage)
     parser.add_option('-d', '--dir', dest='directory', help='Where to create jpeg tiles')
