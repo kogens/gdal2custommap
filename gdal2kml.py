@@ -118,7 +118,7 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
 
     tile_layout = tiles(cropped_size, tile_size)
 
-    tile_sizes = [int(math.ceil(x)) for x in [cropped_size[0] / tile_layout[0], cropped_size[1] / tile_layout[1]]]
+    tile_sizes = [int(math.floor(x)) for x in [cropped_size[0] / tile_layout[0], cropped_size[1] / tile_layout[1]]]
     logging.debug('Using tile layout %s -> %s' % (tile_layout, tile_sizes))
 
     bob = open(filename, 'w')
