@@ -1,4 +1,6 @@
 ## GDAL to CustomMap Tools
+**NOTE**: *The majority of this code comes from [`gdal2custommap`](https://github.com/tf198/gdal2custommap) by [Tris Forster](https://github.com/tf198) written for Python 2. This fork is made to work with Python 3 and also fixes some bugs with large raster maps.*
+
 Some python scripts to generate Garmin CustomMap compatible KMZ from
 geo-referenced images.
 
@@ -28,8 +30,8 @@ sudo apt-get install python-gdal
 ```
 
 For windows there are prebuilt binaries at http://www.gisinternals.com
-The current stable is 1.9.0 and I have tested with the MSVC2008 version and the
-following packages but it can be a bit tricky to get all the paths right
+~~The current stable is 1.9.0 and I have tested with the MSVC2008 version and the
+following packages but it can be a bit tricky to get all the paths right~~
 ```
 (http://python.org/download)
 python-2.7.2.msi
@@ -40,7 +42,7 @@ GDAL-1.9.0.win32-py2.7.msi
 ```
 
 ### Basic Usage
-```
+```bash
 python gdal2kml.py input.tif my_map.kml
 python kml2kmz.py my_map.kml
 ```
@@ -49,7 +51,6 @@ python kml2kmz.py my_map.kml
 
 Usage: `gdal2kml.py [options] src_file dst_file`
 
-Options:
 Option | Result
 ---------|--------
 `-h, --help`      |     show this help message and exit
@@ -64,7 +65,6 @@ Option | Result
 ### kml2kmz.py
 Usage: `kml2kmz.py [options] <kml>`
 
-Options:
 Option | Result
 ---------|--------
 `-h, --help` | Show this help message and exit
