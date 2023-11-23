@@ -1,5 +1,9 @@
-## GDAL to CustomMap Tools
-**NOTE**: *The majority of this code comes from [`gdal2custommap`](https://github.com/tf198/gdal2custommap) by [Tris Forster](https://github.com/tf198) written for Python 2. This fork is made to work with Python 3 and also fixes some bugs with large raster maps.*
+## GDAL to CustomMap Tools (Python 3)
+**NOTE**: *This is a fork of [`gdal2custommap`](https://github.com/tf198/gdal2custommap) by [Tris Forster](https://github.com/tf198)
+to make the scripts work with Python 3. The guide below has not yet been updated, and is
+a bit outdated regarding how to install GDAL, but it should work as a starting point.*
+
+---
 
 Some python scripts to generate Garmin CustomMap compatible KMZ from
 geo-referenced images.
