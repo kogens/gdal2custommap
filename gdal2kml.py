@@ -1,7 +1,8 @@
-import os
-import math
 import logging
+import math
+import os
 from optparse import OptionParser
+
 from osgeo import gdal
 from osgeo import osr
 
@@ -11,7 +12,7 @@ def tiles(canvas, target=1024):
     Brute force algorithm to determine the most efficient tiling method for a given canvas
     If anyone can figure out a prettier one please let me know - is actually harder then you'd think!
     """
-    best_case = (canvas[0] * canvas[1]) / float(target**2)
+    best_case = (canvas[0] * canvas[1]) / float(target ** 2)
 
     # handle the trivial cases first
     if canvas[0] <= target:
@@ -40,8 +41,8 @@ def tiles(canvas, target=1024):
 
 
 def transform(x, y, geotransform):
-    xt = geotransform[0] + x*geotransform[1] + y*geotransform[2]
-    yt = geotransform[3] + x*geotransform[4] + y*geotransform[5]
+    xt = geotransform[0] + x * geotransform[1] + y * geotransform[2]
+    yt = geotransform[3] + x * geotransform[4] + y * geotransform[5]
 
     return xt, yt
 
@@ -76,9 +77,6 @@ def create_tile(img, filename, offset, size, quality=75):
         'south': se[1],
         'west': nw[0],
     }
-
-    jpeg_ds = None
-    mem_ds = None
 
     return result
 
@@ -122,12 +120,13 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     logging.debug('Using tile layout %s -> %s' % (tile_layout, tile_sizes))
 
     bob = open(filename, 'w')
-    
+
     bob.write("""<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
-  <Folder>
-    <name>%s</name>
-""" % name)
+                <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" 
+                xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+                  <Folder>
+                    <name>%s</name>
+                """ % name)
 
     for t_y in range(tile_layout[1]):
         for t_x in range(tile_layout[0]):
@@ -143,7 +142,7 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
 
                 if src_corner[1] + tile_sizes[1] > img_size[1] - border:
                     src_size[1] = int(tile_sizes[1])
-                
+
                 outfile = '%s_%d_%d.jpg' % (base, t_x, t_y)
                 outpath = '%s/%s' % (directory, outfile)
 
@@ -151,7 +150,7 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
                     logging.error('Pixel range outside image data!')
                     logging.error('Image width %i, trying to get at x=%i' % (img_size[0], src_corner[0] + src_size[0]))
                 bounds = create_tile(img, outpath, src_corner, src_size, quality)
-                
+
                 bob.write("""    <GroundOverlay>
                 <name>%s</name>
                 <color>ffffffff</color>
@@ -162,7 +161,7 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
                 </Icon>
                 <LatLonBox>
     """ % (outfile, order, path, outfile))
-            
+
                 bob.write("""        <north>%(north)s</north>
                     <south>%(south)s</south>
                     <east>%(east)s</east>
@@ -172,13 +171,12 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
                 bob.write("""        </LatLonBox>
             </GroundOverlay>
     """)
-        
+
     bob.write("""  </Folder>
     </kml>
     """)
 
     bob.close()
-    img = None
 
 
 if __name__ == '__main__':
