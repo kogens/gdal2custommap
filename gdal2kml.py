@@ -5,28 +5,28 @@ import logging
 import math
 from pathlib import Path
 
+import osgeo.gdal
 from osgeo import gdal
 from osgeo import osr
 
 
-def tiles(canvas, target=1024):
+def tiles(canvas_shape: list[int, int], target: int = 1024) -> list[int]:
     """
     Brute force algorithm to determine the most efficient tiling method for a given canvas
     If anyone can figure out a prettier one please let me know - is actually harder then you'd think!
     """
-    best_case = (canvas[0] * canvas[1]) / float(target ** 2)
+    best_case = (canvas_shape[0] * canvas_shape[1]) / float(target ** 2)
 
-    # handle the trivial cases first
-    if canvas[0] <= target:
+    # Handle the trivial cases first
+    if canvas_shape[0] <= target:
         return [1, math.ceil(best_case)]
 
-    if canvas[1] <= target:
+    if canvas_shape[1] <= target:
         return [math.ceil(best_case), 1]
 
-    r = [float(x) / target for x in canvas]
+    r = [float(x) / target for x in canvas_shape]
 
-    # brute force the 4 methods
-
+    # Brute force the 4 methods
     a_up = [math.ceil(x) for x in r]
     b_up = [math.ceil(best_case / x) for x in a_up]
 
@@ -42,14 +42,18 @@ def tiles(canvas, target=1024):
     return [int(x) for x in results[0][0:2]]
 
 
-def transform(x, y, geotransform):
+def transform(x: int, y: int, geotransform: tuple[int]) -> tuple[int, int]:
     xt = geotransform[0] + x * geotransform[1] + y * geotransform[2]
     yt = geotransform[3] + x * geotransform[4] + y * geotransform[5]
 
     return xt, yt
 
 
-def create_tile(img, filename, offset, size, quality=75):
+def create_tile(img: osgeo.gdal.Dataset,
+                filename: str,
+                offset: tuple[int, int],
+                size: list[int],
+                quality: int = 75) -> dict[str, int]:
     """
     Create a jpeg of the given area and return the bounds.
     """
@@ -62,8 +66,9 @@ def create_tile(img, filename, offset, size, quality=75):
     mem_ds.WriteRaster(0, 0, size[0], size[1], data, band_list=bands)
     # Error comes because we go out of bounds of image?
 
+    # Save tiles as jpeg
     jpeg_drv = gdal.GetDriverByName('JPEG')
-    jpeg_ds = jpeg_drv.CreateCopy(filename, mem_ds, strict=0, options=["QUALITY={0}".format(quality)])
+    jpeg_drv.CreateCopy(filename, mem_ds, strict=0, options=["QUALITY={0}".format(quality)])
 
     geotransform = img.GetGeoTransform()
 
@@ -91,7 +96,7 @@ def create_kml(source: str | Path,
                name: str = None,
                order: int = 20,
                exclude: list[str] = None,
-               quality: int = 75):
+               quality: int = 75) -> None:
     """
     Create a kml file and associated images for the given georeferenced image 
     """
@@ -210,9 +215,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # if len(args_old) != 2:
-    #    parser.error('Missing file paths')
-
     source_file, destination_file = Path(args.src_file), Path(args.dst_file)
 
     if args.verbose:
@@ -221,16 +223,12 @@ if __name__ == '__main__':
     # validate a few options
     if not source_file.exists():
         parser.error('unable to file src_file')
-    # if options.scale<10 or options.scale>150: parser.error('scale must be between 10% and 150%')
 
     # set the default folder for jpegs
     if not args.directory:
-        # args.directory = f"{os.path.splitext(destination_file)[0]}.files"
         directory = destination_file.with_suffix('.files')
-        print(directory)
     else:
         directory = Path(args.directory)
-        print(directory)
 
     directory.mkdir(exist_ok=True)
 
