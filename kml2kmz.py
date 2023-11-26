@@ -35,7 +35,7 @@ if __name__ == '__main__':
         parser.error('Path to KML file is required')
 
     if not os.path.exists(args.src_file):
-        parser.error('Unable to find KML: %s' % args.src_file)
+        parser.error(f'Unable to find KML: {args.src_file}')
 
     if not args.outfile:
         args.outfile = os.path.basename(args.src_file)[:-4] + '.kmz'
@@ -58,11 +58,11 @@ if __name__ == '__main__':
             img = base + '/' + img
 
         if not os.path.exists(img):
-            parser.error('Unable to find image: %s' % img)
+            parser.error(f'Unable to find image: {img}')
 
         # add the image
-        filename = 'files/%s' % os.path.basename(img)
-        logging.debug("Storing %s as %s" % (img, filename))
+        filename = f'files/{os.path.basename(img)}'
+        logging.debug(f"Storing {img} as {filename}")
         zipped.write(img, filename, zipfile.ZIP_STORED)
 
         # modify the xml to point to the correct image

@@ -90,7 +90,7 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
 
     img = gdal.Open(source)
     if img is None:
-        raise(AttributeError('Not a valid georeferenced image:', source))
+        raise (AttributeError('Not a valid georeferenced image:', source))
     projection = img.GetProjection()
     logging.info(projection)
 
@@ -102,12 +102,12 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     if authority != ('EPSG', '4326'):
         # https://gdal.org/tutorials/osr_api_tut.html#coordinate-transformation
         # ct = osr.CoordinateTransformation()
-        errmsg = 'Input file is not in standard CRS. Should be EPSG 4326 but is %s %s' % (authority[0], authority[1])
+        errmsg = f'Input file is not in standard CRS. Should be EPSG 4326 but is {authority[0]} {authority[1]}'
         logging.error(errmsg)
         raise NotImplementedError(errmsg)
 
     img_size = [img.RasterXSize, img.RasterYSize]
-    logging.debug('Image size: %s' % img_size)
+    logging.debug(f'Image size: {img_size}')
     cropped_size = [x - border * 2 for x in img_size]
 
     base, ext = os.path.splitext(os.path.basename(source))
@@ -119,23 +119,23 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     tile_layout = tiles(cropped_size, tile_size)
 
     tile_sizes = [int(math.floor(x)) for x in [cropped_size[0] / tile_layout[0], cropped_size[1] / tile_layout[1]]]
-    logging.debug('Using tile layout %s -> %s' % (tile_layout, tile_sizes))
+    logging.debug(f'Using tile layout {tile_layout} -> {tile_sizes}')
 
     bob = open(filename, 'w')
 
-    bob.write("""<?xml version="1.0" encoding="UTF-8"?>
-                <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" 
-                xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
-                  <Folder>
-                    <name>%s</name>
-                """ % name)
+    bob.write(f"""<?xml version="1.0" encoding="UTF-8"?>
+             <kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" 
+             xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+               <Folder>
+                 <name>{name}</name>
+             """)
 
     for t_y in range(tile_layout[1]):
         for t_x in range(tile_layout[0]):
-            tile = "%d,%d" % (t_y, t_x)
+            tile = f'{t_y},{t_x}'
             logging.debug(tile)
             if tile in exclude:
-                logging.debug("Excluding tile %s" % tile)
+                logging.debug(f"Excluding tile {tile}")
             else:
                 src_corner = (border + t_x * tile_sizes[0], border + t_y * tile_sizes[1])
                 src_size = [tile_sizes[0], tile_sizes[1]]
@@ -145,31 +145,30 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
                 if src_corner[1] + tile_sizes[1] > img_size[1] - border:
                     src_size[1] = int(tile_sizes[1])
 
-                outfile = '%s_%d_%d.jpg' % (base, t_x, t_y)
-                outpath = '%s/%s' % (directory, outfile)
+                outfile = f'{base}_{t_x:d}_{t_y:d}.jpg'
+                outpath = f'{directory}/{outfile}'
 
                 if src_corner[0] + src_size[0] > img_size[0]:
                     logging.error('Pixel range outside image data!')
-                    logging.error('Image width %i, trying to get at x=%i' % (img_size[0], src_corner[0] + src_size[0]))
+                    logging.error(f'Image width {img_size[0]}, trying to get at x={src_corner[0] + src_size[0]}')
                 bounds = create_tile(img, outpath, src_corner, src_size, quality)
 
-                bob.write("""    <GroundOverlay>
-                <name>%s</name>
+                bob.write(f"""    <GroundOverlay>
+                <name>{outfile}</name>
                 <color>ffffffff</color>
-                <drawOrder>%d</drawOrder>
+                <drawOrder>{order}</drawOrder>
                 <Icon>
-                    <href>%s/%s</href>
+                    <href>{path}/{outfile}</href>
                     <viewBoundScale>0.75</viewBoundScale>
                 </Icon>
-                <LatLonBox>
-    """ % (outfile, order, path, outfile))
+                <LatLonBox>""")
 
-                bob.write("""        <north>%(north)s</north>
-                    <south>%(south)s</south>
-                    <east>%(east)s</east>
-                    <west>%(west)s</west>
-                    <rotation>0</rotation>
-    """ % bounds)
+                bob.write(f"""<north>{bounds['north']}</north>
+                                <south>{bounds['south']}</south>
+                                <east>{bounds['east']}</east>
+                                <west>{bounds['west']}</west>
+                                <rotation>0</rotation>
+                """)
                 bob.write("""        </LatLonBox>
             </GroundOverlay>
     """)
@@ -213,18 +212,18 @@ if __name__ == '__main__':
 
     # set the default folder for jpegs
     if not args.directory:
-        args.directory = "%s.files" % os.path.splitext(destination_file)[0]
+        args.directory = f"{os.path.splitext(destination_file)[0]}.files"
 
     if not os.path.exists(args.directory):
         os.mkdir(args.directory)
 
-    logging.info('Writing jpegs to %s' % args.directory)
+    logging.info(f'Writing jpegs to {args.directory}')
 
     # load the exclude file
     exclude_file = source_file + ".exclude"
     exclude = []
     if os.path.exists(exclude_file):
-        logging.debug("Using exclude file %s" % exclude_file)
+        logging.debug(f"Using exclude file {exclude_file}")
         for line in open(exclude_file):
             exclude.append(line.rstrip())
         logging.debug(exclude)
