@@ -89,6 +89,8 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
         exclude = []
 
     img = gdal.Open(source)
+    if img is None:
+        raise(AttributeError('Not a valid georeferenced image:', source))
     projection = img.GetProjection()
     logging.info(projection)
 
