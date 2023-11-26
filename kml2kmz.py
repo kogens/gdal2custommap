@@ -1,8 +1,8 @@
 import argparse
 import logging
-import os.path
 import re
 import zipfile
+from pathlib import Path
 
 from xml.dom.minidom import parse
 
@@ -31,37 +31,37 @@ if __name__ == '__main__':
         logging.basicConfig(level=logging.DEBUG)
 
     # check for KML
-    if args.src_file is None:
-        parser.error('Path to KML file is required')
+    src_file = Path(args.src_file)
 
-    if not os.path.exists(args.src_file):
-        parser.error(f'Unable to find KML: {args.src_file}')
+    if not src_file.exists():
+        parser.error(f'Unable to find KML: {src_file}')
 
     if not args.outfile:
-        args.outfile = os.path.basename(args.src_file)[:-4] + '.kmz'
+        # If no output file is given, use input filename with .kmz extension
+        args.outfile = src_file.with_suffix('.kmz')
     logging.info("Output to", args.outfile)
 
     # create the output zip file
     zipped = zipfile.ZipFile(args.outfile, 'w', zipfile.ZIP_DEFLATED)
 
     # read the source xml
-    kml = parse(args.src_file)
+    kml = parse(str(src_file))
     nodes = kml.getElementsByTagName('href')
 
-    base = os.path.dirname(args.src_file)
+    base = src_file.parent
 
     for node in nodes:
         href = node.firstChild
 
-        img = urldecode(href.nodeValue).replace('file:///', '')
-        if not os.path.exists(img):
-            img = base + '/' + img
+        img = Path(urldecode(href.nodeValue).replace('file:///', ''))
+        if not img.exists():
+            img = base / img
 
-        if not os.path.exists(img):
+        if not img.exists():
             parser.error(f'Unable to find image: {img}')
 
         # add the image
-        filename = f'files/{os.path.basename(img)}'
+        filename = Path('files') / img.name
         logging.debug(f"Storing {img} as {filename}")
         zipped.write(img, filename, zipfile.ZIP_STORED)
 

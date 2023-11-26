@@ -1,7 +1,9 @@
+from __future__ import annotations
+
+import argparse
 import logging
 import math
-import os
-import argparse
+from pathlib import Path
 
 from osgeo import gdal
 from osgeo import osr
@@ -81,14 +83,25 @@ def create_tile(img, filename, offset, size, quality=75):
     return result
 
 
-def create_kml(source, filename, directory, tile_size=1024, border=0, name=None, order=20, exclude=None, quality=75):
+def create_kml(source: str | Path,
+               filename: str | Path,
+               directory: str | Path,
+               tile_size: int = 1024,
+               border: int = 0,
+               name: str = None,
+               order: int = 20,
+               exclude: list[str] = None,
+               quality: int = 75):
     """
     Create a kml file and associated images for the given georeferenced image 
     """
+
+    source, filename, directory = Path(source), Path(filename), Path(directory)
+
     if exclude is None:
         exclude = []
 
-    img = gdal.Open(source)
+    img = gdal.Open(str(source))
     if img is None:
         raise (AttributeError('Not a valid georeferenced image:', source))
     projection = img.GetProjection()
@@ -110,11 +123,11 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
     logging.debug(f'Image size: {img_size}')
     cropped_size = [x - border * 2 for x in img_size]
 
-    base, ext = os.path.splitext(os.path.basename(source))
+    base, ext = source.stem, source.suffix
 
     if not name:
         name = base
-    path = os.path.relpath(directory, os.path.dirname(filename))
+    path = directory.relative_to(filename.parent)
 
     tile_layout = tiles(cropped_size, tile_size)
 
@@ -200,35 +213,39 @@ if __name__ == '__main__':
     # if len(args_old) != 2:
     #    parser.error('Missing file paths')
 
-    source_file, destination_file = args.src_file, args.dst_file
+    source_file, destination_file = Path(args.src_file), Path(args.dst_file)
 
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
     # validate a few options
-    if not os.path.exists(source_file):
+    if not source_file.exists():
         parser.error('unable to file src_file')
     # if options.scale<10 or options.scale>150: parser.error('scale must be between 10% and 150%')
 
     # set the default folder for jpegs
     if not args.directory:
-        args.directory = f"{os.path.splitext(destination_file)[0]}.files"
+        # args.directory = f"{os.path.splitext(destination_file)[0]}.files"
+        directory = destination_file.with_suffix('.files')
+        print(directory)
+    else:
+        directory = Path(args.directory)
+        print(directory)
 
-    if not os.path.exists(args.directory):
-        os.mkdir(args.directory)
+    directory.mkdir(exist_ok=True)
 
     logging.info(f'Writing jpegs to {args.directory}')
 
     # load the exclude file
-    exclude_file = source_file + ".exclude"
+    exclude_file = source_file.with_suffix('.exclude')
     exclude = []
-    if os.path.exists(exclude_file):
+    if exclude_file.exists():
         logging.debug(f"Using exclude file {exclude_file}")
         for line in open(exclude_file):
             exclude.append(line.rstrip())
         logging.debug(exclude)
 
-    create_kml(source_file, destination_file, args.directory,
+    create_kml(source_file, destination_file, directory,
                tile_size=args.tile_size,
                border=args.border,
                name=args.name,
