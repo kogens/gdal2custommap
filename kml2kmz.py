@@ -1,8 +1,8 @@
+import argparse
 import logging
 import os.path
 import re
 import zipfile
-from optparse import OptionParser
 
 from xml.dom.minidom import parse
 
@@ -17,35 +17,38 @@ def urldecode(url):
 
 
 if __name__ == '__main__':
-    usage = "%prog [options] <kml>"
-    parser = OptionParser(usage)
-    parser.add_option('-o', '--outfile', dest="outfile", metavar="FILE", help="Write output to FILE")
-    parser.add_option('-v', '--verbose', dest='verbose', action='store_true', help='Verbose output')
+    parser = argparse.ArgumentParser(
+        description='Convert KML file to KMZ (Garmin CustomMap) file'
+    )
+    parser.add_argument('src_file', metavar='src_file', type=str, help='Source file')
 
-    (options, args) = parser.parse_args()
+    parser.add_argument('-o', '--outfile', dest="outfile", metavar="FILE", help="Write output to FILE")
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Verbose output')
 
-    if options.verbose:
+    args = parser.parse_args()
+
+    if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
     # check for KML
-    if len(args) < 1:
+    if args.src_file is None:
         parser.error('Path to KML file is required')
 
-    if not os.path.exists(args[0]):
-        parser.error('Unable to find KML: %s' % args[0])
+    if not os.path.exists(args.src_file):
+        parser.error('Unable to find KML: %s' % args.src_file)
 
-    if not options.outfile:
-        options.outfile = os.path.basename(args[0])[:-4] + '.kmz'
-    logging.info("Output to", options.outfile)
+    if not args.outfile:
+        args.outfile = os.path.basename(args.src_file)[:-4] + '.kmz'
+    logging.info("Output to", args.outfile)
 
     # create the output zip file
-    zipped = zipfile.ZipFile(options.outfile, 'w', zipfile.ZIP_DEFLATED)
+    zipped = zipfile.ZipFile(args.outfile, 'w', zipfile.ZIP_DEFLATED)
 
     # read the source xml
-    kml = parse(args[0])
+    kml = parse(args.src_file)
     nodes = kml.getElementsByTagName('href')
 
-    base = os.path.dirname(args[0])
+    base = os.path.dirname(args.src_file)
 
     for node in nodes:
         href = node.firstChild

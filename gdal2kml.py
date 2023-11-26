@@ -1,7 +1,7 @@
 import logging
 import math
 import os
-from optparse import OptionParser
+import argparse
 
 from osgeo import gdal
 from osgeo import osr
@@ -180,24 +180,28 @@ def create_kml(source, filename, directory, tile_size=1024, border=0, name=None,
 
 
 if __name__ == '__main__':
-    usage = 'usage: %prog [options] src_file dst_file'
-    parser = OptionParser(usage)
-    parser.add_option('-d', '--dir', dest='directory', help='Where to create jpeg tiles')
-    parser.add_option('-c', '--crop', default=0, dest='border', type='int', help='Crop border')
-    parser.add_option('-n', '--name', dest='name', help='KML folder name for output')
-    parser.add_option('-o', '--draw-order', dest='order', type='int', default=20, help='KML draw order')
-    parser.add_option('-t', '--tile-size', dest='tile_size', default=1024, type='int', help='Max tile size [1024]')
-    parser.add_option('-q', '--quality', dest='quality', default=75, type='int', help='JPEG quality [75]')
-    parser.add_option('-v', '--verbose', dest='verbose', action='store_true', help='Verbose output')
+    parser = argparse.ArgumentParser(
+        description='Convert a georeferenced TIFF file to KML file')
 
-    options, args = parser.parse_args()
+    parser.add_argument('src_file', metavar='src_file', type=str, help='source file')
+    parser.add_argument('dst_file', metavar='dst_file', type=str, help='destination file')
 
-    if len(args) != 2:
-        parser.error('Missing file paths')
+    parser.add_argument('-d', '--dir', dest='directory', help='Where to create jpeg tiles')
+    parser.add_argument('-c', '--crop', default=0, dest='border', type=int, help='Crop border')
+    parser.add_argument('-n', '--name', dest='name', help='KML folder name for output')
+    parser.add_argument('-o', '--draw-order', dest='order', type=int, default=20, help='KML draw order')
+    parser.add_argument('-t', '--tile-size', dest='tile_size', default=1024, type=int, help='Max tile size [1024]')
+    parser.add_argument('-q', '--quality', dest='quality', default=75, type=int, help='JPEG quality [75]')
+    parser.add_argument('-v', '--verbose', dest='verbose', action='store_true', help='Verbose output')
 
-    source_file, destination_file = args
+    args = parser.parse_args()
 
-    if options.verbose:
+    # if len(args_old) != 2:
+    #    parser.error('Missing file paths')
+
+    source_file, destination_file = args.src_file, args.dst_file
+
+    if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
 
     # validate a few options
@@ -206,13 +210,13 @@ if __name__ == '__main__':
     # if options.scale<10 or options.scale>150: parser.error('scale must be between 10% and 150%')
 
     # set the default folder for jpegs
-    if not options.directory:
-        options.directory = "%s.files" % os.path.splitext(destination_file)[0]
+    if not args.directory:
+        args.directory = "%s.files" % os.path.splitext(destination_file)[0]
 
-    if not os.path.exists(options.directory):
-        os.mkdir(options.directory)
+    if not os.path.exists(args.directory):
+        os.mkdir(args.directory)
 
-    logging.info('Writing jpegs to %s' % options.directory)
+    logging.info('Writing jpegs to %s' % args.directory)
 
     # load the exclude file
     exclude_file = source_file + ".exclude"
@@ -223,10 +227,10 @@ if __name__ == '__main__':
             exclude.append(line.rstrip())
         logging.debug(exclude)
 
-    create_kml(source_file, destination_file, options.directory,
-               tile_size=options.tile_size,
-               border=options.border,
-               name=options.name,
-               order=options.order,
+    create_kml(source_file, destination_file, args.directory,
+               tile_size=args.tile_size,
+               border=args.border,
+               name=args.name,
+               order=args.order,
                exclude=exclude,
-               quality=options.quality)
+               quality=args.quality)
